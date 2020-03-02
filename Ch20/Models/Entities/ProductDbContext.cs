@@ -9,18 +9,18 @@ namespace Ch20.Models.Entities
 {
     public class ProductDbContext : DbContext
     {
-        public ProductDbContext([NotNullAttribute] DbContextOptions options) : base(options)
-        {
-        }
+        public ProductDbContext([NotNullAttribute] DbContextOptions options) 
+            : base(options) { }
 
         public DbSet<Product> Products { get; set; }
         public DbSet<Category> Categories { get; set; }
+        public DbSet<Sup> Sups { get; set; }
 
         public DbSet<Prod> Prods { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<Product>().HasQueryFilter(p => p.SoftDeleted != true);
+            //modelBuilder.Entity<Product>().HasQueryFilter(p => p.SoftDeleted != true);
             modelBuilder.Entity<Product>(cfg =>
             {
                 cfg.Property(p => p.Price)

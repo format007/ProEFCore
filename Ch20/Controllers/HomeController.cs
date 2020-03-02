@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Ch20.Models.Entities;
+using Microsoft.AspNet.OData;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 
 namespace Ch20.Controllers
 {
@@ -27,14 +30,10 @@ namespace Ch20.Controllers
         }
 
         [HttpGet]
-        public async  Task<IActionResult> GetAll([FromQuery]string searchStr)
+        [EnableQuery()]
+        public IQueryable<Product> GetAll()
         {
-            var Prods = string.IsNullOrEmpty(searchStr) 
-                ? dbContext.Products.Include(p=>p.Supplier) 
-                : search(dbContext, searchStr);
-
-            return await Task.FromResult(
-                Ok(Prods));
+            return dbContext.Products;
         }
 
         [HttpPost]
@@ -75,6 +74,73 @@ namespace Ch20.Controllers
         public async Task<IActionResult> ClientAvaluated()
         {
             return Ok(await dbContext.Products.Where(p => FilterPrice(p.Price)).ToListAsync());
+        }
+
+        [HttpGet("joinquery")]
+        public async Task<IActionResult> JoinQuery()
+        {
+            var result = from prod in dbContext.Products
+                         join category in dbContext.Categories on prod.CategoryId equals category.Id
+                         select new { prod.Id, prod.Name, CategoryId = category.Id, CategoryName = category.Name};
+            return Ok(await result.ToListAsync());
+        }
+
+        [HttpGet("innerjoin")]
+        public async Task<IActionResult> InnerJoinQuery()
+        {
+            var result = from prod in dbContext.Products
+                         from category in dbContext.Categories.Where(c=>c.Id == prod.CategoryId)
+                         select new { prod.Id, prod.Name, CategoryId = category.Id, CategoryName = category.Name };
+            return Ok(await result.ToListAsync());
+        }
+
+        [HttpGet("groupjoin")]
+        public async Task<IActionResult> GroupJoinQuery()
+        {
+            var result = from cat in await dbContext.Categories.ToListAsync()
+                      join prod in await dbContext.Products.ToListAsync()
+                        on cat.Id equals prod.CategoryId into prodGroup
+                      select new { cat, prodGroup };
+
+            //foreach(var obj in result)
+            //{
+            //    obj.ToString();
+            //}
+
+            return Ok(result);
+        }
+
+        [HttpGet("crossjoin")]
+        public async Task<IActionResult> CrossJoin()
+        {
+            var result = from cat in dbContext.Categories
+                         from prod in dbContext.Products
+                         select new { cat, prod };
+
+            return Ok(await result.ToListAsync());
+        }
+
+        [HttpGet("leftjoin")]
+        public async Task<IActionResult> LeftJoin()
+        {
+            var result = from cat in dbContext.Categories
+                         from prod in dbContext.Products.Where(p=> p.CategoryId == cat.Id).DefaultIfEmpty()
+                         select new { cat, prod };
+
+            return Ok(await result.ToListAsync());
+        }
+
+        [HttpGet("groupby1")]
+        public async Task<IActionResult> GroupBy1()
+        {
+            var result = //from cat in dbContext.Categories
+                         from prod in dbContext.Products.Where(p => p.CategoryId > 0)
+                         group prod by prod.CategoryId into g
+                         where g.Count() > 1
+                         orderby g.Key
+                         select new { g.Key, Count = g.Count() };
+
+            return Ok(await result.ToListAsync());
         }
 
         private bool FilterPrice(double price)
