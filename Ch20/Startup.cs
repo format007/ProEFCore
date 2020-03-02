@@ -12,6 +12,9 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Ch20.Tools;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.AspNet.OData.Extensions;
+using Microsoft.AspNet.OData.Builder;
+using Microsoft.OData.Edm;
 
 namespace Ch20
 {
@@ -27,8 +30,11 @@ namespace Ch20
             string conStr = Configuration.GetConnectionString("DefaultConnection");
             services.AddDbContext<ProductDbContext>(opt =>
                 opt.UseSqlServer(conStr));
-            services.AddControllers();
+            services.AddControllers(cfg=>cfg.EnableEndpointRouting = false)
+                 .AddNewtonsoftJson(); 
             services.AddSwaggerDefault();
+            services.AddOData();
+            services.AddDirectoryBrowser();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -40,10 +46,27 @@ namespace Ch20
                 app.UseSwaggerDefault();
             }
 
-            app.UseStaticFiles();
+            app.UseDirectoryBrowser();
             app.UseStatusCodePages();
-            app.UseRouting();
-            app.UseEndpoints(cfg => cfg.MapControllers());
+            app.UseMvc(routeBuilder =>
+            {
+                routeBuilder.EnableDependencyInjection();
+                routeBuilder.Select().Filter().OrderBy().Expand().Count() ;
+                //routeBuilder.MapODataServiceRoute("odata", "odata", GetEdmModel());
+            });
+            //app.UseRouting();
+            //app.UseEndpoints(cfg =>
+            //{
+            //    cfg.MapControllers();
+            //});
+
+            IEdmModel GetEdmModel()
+            {
+                var odataBuilder = new ODataConventionModelBuilder();
+                odataBuilder.EntitySet<Product>("Product");
+
+                return odataBuilder.GetEdmModel();
+            }
         }
     }
 }
