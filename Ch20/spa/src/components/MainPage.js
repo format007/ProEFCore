@@ -1,76 +1,31 @@
 import React, { Component } from 'react';
-import TaskDisplay from "./TaskDisplay/";
-import OrderDisplay from "./OrderDisplay";
+import {BrowserRouter as Router, Route, Switch} from "react-router-dom";
+import ProtectedRoute from "./ProtectedRoute";
+import clientRoutes from "../routes/clientRoutes";
 import AuthCallback from "./AuthCallback";
-import {NavLink as Link, Route, Switch, Redirect} from "react-router-dom";
-import mgr from "../websvc/authMgr";
-import LoginAuth from "../websvc/loginAuth";
+import RefreshTokenCallback from "./RefreshTokenCallback";
+import SignoutCallback from "./SignoutCallback";
+import ProtectedPage from "./ProtectedPage";
+import MainMenu from "./MainMenu";
+import AuthProvider from './AuthProvider';
 
 export default class MainPage extends Component {
-    constructor(props){
-        super(props);
-
-        this.state = {
-            menuindex : 0,
-            logged: false
-        };
-
-        this.loginAuthSvc = new LoginAuth("http://localhost:5000/Account/Login", "alice", "alice");
-    }
-    
-    login =  async () => {
-        let user =await mgr.getUser();
-        if (!user) {
-            await this.loginAuthSvc.login();
-            let result = await mgr.signinSilent();
-            console.log(result);
-        }
-    };
-
-    logout = () => {
-        mgr.signoutRedirect();
-    };
-
-    checkLogged = () => {
-        mgr.getUser().then( user => {
-            user ? this.setState({logged: true}) : this.setState({logged:false})
-        });
-    };
-
-    api = async () => {
-        let user = await mgr.getUser();
-        if (!user)
-            await this.login();
-
-        var url = "http://localhost:5001/identity";
-        var xhr = new XMLHttpRequest();
-        xhr.open("GET", url);
-        xhr.onload = function () {
-            console.log(JSON.parse(xhr.responseText));
-            }
-        xhr.setRequestHeader("Authorization", "Bearer " + user.access_token);
-        xhr.send();
-    } 
-
     render() {
         return (
-            <div>
-                {this.state.logged.toString()}
-                <Link to="/orders" activeStyle={ {"color":"red" } }>Orders</Link>
-                <Link to="/tasks">Tasks 1</Link>
-                <Link to="/login">Login</Link>
+            <AuthProvider>
+            <Router>
+                <MainMenu/>
                 <Switch>
-                    <Route path="/orders" component={ OrderDisplay }/>
-                    <Route path="/tasks" component={ TaskDisplay }/>
-                    <Route path="/callback" component={AuthCallback}/>
-                    <Redirect to="orders"/>
+                    <Route exact={true} path={clientRoutes.oidc.callback} 
+                        component={AuthCallback}/>
+                    <Route exact={true} path={clientRoutes.oidc.refreshToken} 
+                        component={RefreshTokenCallback}/>
+                    <Route exact={true} path={clientRoutes.oidc.signoutCallback} 
+                        component={SignoutCallback}/>
+                    <ProtectedRoute path="/" component={ProtectedPage}/>
                 </Switch>
-
-                <button onClick={this.login}>Login</button>
-                <button onClick={this.api}>Api</button>
-                <button onClick={this.logout}>Logout</button>
-
-            </div>
+            </Router>
+            </AuthProvider>
         )
     }
 }

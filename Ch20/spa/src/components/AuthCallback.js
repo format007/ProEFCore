@@ -1,21 +1,12 @@
-import React, { Component } from 'react';
-import Oidc from "oidc-client";
+import React from "react";
+import AuthConsumer from "./AuthConsumer";
 
-export default class AuthCallback extends Component {
+const AuthCallback = () => {
+    return <AuthConsumer>
+        {
+            ({signinRedirectCallback}) => signinRedirectCallback()
+        }
+    </AuthConsumer>
+};
 
-    componentDidMount(){
-        new Oidc.UserManager({ response_mode: "query" }).signinRedirectCallback().then(function () {
-            window.location = "/order";
-        }).catch(function (e) {
-            console.error(e);
-        });
-    }
-
-    render() {
-        return (
-            <div>
-                AuthCallback
-            </div>
-        )
-    }
-}
+export default AuthCallback;
