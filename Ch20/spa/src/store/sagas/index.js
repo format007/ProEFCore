@@ -27,10 +27,3 @@ function* watchFetchTasks(action){
         }
     }
 }
-
-function* watchSomethingElse(){
-    console.log("watching something else");
-}
-
-
-
